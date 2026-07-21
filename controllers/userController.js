@@ -1,59 +1,55 @@
-function register(req, res, next) {
+// Initialize global storage 
+global.users = global.users || [];
+global.user_id = global.user_id || null;
+
+const register = (req, res) => {
   const { name, email, password } = req.body;
 
-  if (!global.users) {
-    global.users = [];
+  // Check for duplicate email
+  const existingUser = global.users.find((u) => u.email === email);
+  if (existingUser) {
+    return res.status(400).json({ error: "Email already registered" });
   }
 
   const newUser = {
+    id: Date.now(),
     name,
     email,
-    password,
+    password, // Stored for logon matching
   };
 
   global.users.push(newUser);
-  global.user_id = newUser;
+  global.user_id = newUser; 
 
-  return res.status(201).json({
+  res.status(201).json({
     name: newUser.name,
     email: newUser.email,
   });
-}
+};
 
-function logon(req, res, next) {
+const logon = (req, res) => {
   const { email, password } = req.body;
 
-  if (!global.users) {
-    global.users = [];
-  }
-
-  const matchedUser = global.users.find(
-    (user) => user.email === email && user.password === password
+  const user = global.users.find(
+    (u) => u.email === email && u.password === password
   );
 
-  if (!matchedUser) {
-    return res.status(401).json({
-      message: "Invalid email or password.",
-    });
+  if (!user) {
+    return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  global.user_id = matchedUser;
+  global.user_id = user;
 
-  return res.status(200).json({
-    name: matchedUser.name,
-    email: matchedUser.email,
+  res.status(200).json({
+    name: user.name,
+    email: user.email,
   });
-}
+};
 
-function logoff(req, res, next) {
-  // Clear the active session user
+const logoff = (req, res) => {
   global.user_id = null;
-
-  // Return status 200
-  return res.status(200).json({
-    message: "Logged off successfully.",
-  });
-}
+  res.status(200).send(); 
+};
 
 module.exports = {
   register,

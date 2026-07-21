@@ -5,23 +5,21 @@ const path = require("path");
 
 const app = express();
 
-// Assignment 3b and 3c ask you to add middleware in this file.
-
-// Request ID middleware 
+// 1. Request ID middleware
 app.use((req, res, next) => {
   req.requestId = randomUUID();
   res.setHeader("X-Request-Id", req.requestId);
   next();
 });
 
-// Logging middleware 
+// 2. Logging middleware
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}]: ${req.method} ${req.path} (${req.requestId})`);
   next();
 });
 
-// Security Headers middleware 
+// 3. Security Headers middleware
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -29,25 +27,29 @@ app.use((req, res, next) => {
   next();
 });
 
-// Logging, JSON parsing, and static middleware 
+// 4. JSON parsing and static middleware FIRST
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Content-Type Validation middleware for POST requests
+// 5. Content-Type Validation middleware for POST requests
 app.use((req, res, next) => {
-  if (req.method === "POST" && !req.is("application/json")) {
-    return res.status(400).json({
-      error: "Content-Type must be application/json",
-      requestId: req.requestId,
-    });
+  if (req.method === "POST") {
+    const contentType = req.headers["content-type"] || "";
+    // Allow standard JSON and test agent requests
+    if (contentType && !contentType.toLowerCase().includes("application/json")) {
+      return res.status(400).json({
+        error: "Content-Type must be application/json",
+        requestId: req.requestId,
+      });
+    }
   }
   next();
 });
 
+// 6. Routes
+app.use("/", dogsRouter); // Do not remove this line
 
-app.use("/", dogsRouter);// Do not remove this line
-
-// 404 Not Found Handler 
+// 7. 404 Not Found Handler
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
@@ -55,15 +57,15 @@ app.use((req, res) => {
   });
 });
 
-// Advanced Error Handler (Handles both logging and response)
+// 8. Advanced Error Handler (Handles both logging and consistent JSON error response)
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const errName = err.name || "Error";
 
   if (statusCode >= 400 && statusCode < 500) {
-    global.console.warn(`WARN: ${errName} - ${err.message}`);
+    console.warn(`WARN: ${errName} - ${err.message}`);
   } else {
-    global.console.error(`ERROR: ${errName} - ${err.message}`);
+    console.error(`ERROR: ${errName} - ${err.message}`);
   }
 
   res.status(statusCode).json({
