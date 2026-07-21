@@ -5,20 +5,11 @@ global.user_id = global.user_id || null;
 const register = (req, res) => {
   const { name, email, password } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  const existingUser = global.users.find((u) => u.email === email);
-  if (existingUser) {
-    return res.status(400).json({ error: "Email already registered" });
-  }
-
   const newUser = {
     id: Date.now(),
     name,
     email,
-    password, // Stored for logon matching
+    password,
   };
 
   global.users.push(newUser);
@@ -38,7 +29,7 @@ const logon = (req, res) => {
   );
 
   if (!user) {
-    return res.status(401).json({ error: "Invalid email or password" });
+    return res.sendStatus(401);
   }
 
   global.user_id = user;
@@ -51,7 +42,7 @@ const logon = (req, res) => {
 
 const logoff = (req, res) => {
   global.user_id = null;
-  res.status(200).json({});
+  res.sendStatus(200);
 };
 
 module.exports = {
