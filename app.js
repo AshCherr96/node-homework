@@ -10,13 +10,13 @@ global.user_id = null;
 global.users = [];
 global.tasks = [];
 
-// 1. Use express.json() before your routes
+// 1. Use express.json() before routes
 app.use(express.json());
 
 // 2. Mount the user router at /api/users
 app.use("/api/users", userRoutes);
 
-// 3. Add not-found middleware after your routes
+// 3. Add not-found middleware
 app.use(notFound);
 
 // 4. Add error-handler middleware at the end
