@@ -5,7 +5,10 @@ global.user_id = global.user_id || null;
 const register = (req, res) => {
   const { name, email, password } = req.body;
 
-  // Check for duplicate email
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
   const existingUser = global.users.find((u) => u.email === email);
   if (existingUser) {
     return res.status(400).json({ error: "Email already registered" });
@@ -19,7 +22,7 @@ const register = (req, res) => {
   };
 
   global.users.push(newUser);
-  global.user_id = newUser; 
+  global.user_id = newUser;
 
   res.status(201).json({
     name: newUser.name,
@@ -48,7 +51,7 @@ const logon = (req, res) => {
 
 const logoff = (req, res) => {
   global.user_id = null;
-  res.status(200).send(); 
+  res.status(200).json({});
 };
 
 module.exports = {
