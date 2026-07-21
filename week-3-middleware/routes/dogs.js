@@ -19,7 +19,7 @@ router.post("/adopt", (req, res, next) => {
   const dog = dogs.find((d) => String(d.name) === String(dogName));
 
   if (!dog || dog.status !== "available") {
-    return next(new NotFoundError("Dog not found or not available"));
+    return next(new NotFoundError("not found or not available"));
   }
 
   res.status(201).json({
