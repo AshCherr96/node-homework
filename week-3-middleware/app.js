@@ -35,7 +35,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use((req, res, next) => {
   if (req.method === "POST") {
     const contentType = req.headers["content-type"] || "";
-    // Allow standard JSON and test agent requests
     if (contentType && !contentType.toLowerCase().includes("application/json")) {
       return res.status(400).json({
         error: "Content-Type must be application/json",
@@ -46,8 +45,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// 6. Routes
-app.use("/", dogsRouter); // Do not remove this line
+// 6. Routes (Mounted at root so GET /dogs, POST /adopt, GET /error resolve correctly)
+app.use("/", dogsRouter);
 
 // 7. 404 Not Found Handler
 app.use((req, res) => {
@@ -57,7 +56,7 @@ app.use((req, res) => {
   });
 });
 
-// 8. Advanced Error Handler (Handles both logging and consistent JSON error response)
+// 8. Advanced Error Handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const errName = err.name || "Error";

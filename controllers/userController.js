@@ -1,12 +1,11 @@
-
-// Ensure global storage arrays/objects are initialized
+// Initialize global storage if not already defined
 global.users = global.users || [];
 global.user_id = global.user_id || null;
 
 const register = (req, res) => {
   const { name, email, password } = req.body;
 
-  // Prevent duplicate registration for the same email
+  // Prevent duplicate emails
   const existingUser = global.users.find((u) => u.email === email);
   if (existingUser) {
     return res.status(400).json({ error: "Email already registered" });
@@ -20,9 +19,8 @@ const register = (req, res) => {
   };
 
   global.users.push(newUser);
-  global.user_id = newUser; // Set global.user_id to the created user object
+  global.user_id = newUser; // Set global.user_id to the active user object
 
-  // Return status 201 with only name and email
   res.status(201).json({
     name: newUser.name,
     email: newUser.email,
