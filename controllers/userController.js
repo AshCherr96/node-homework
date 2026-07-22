@@ -14,7 +14,7 @@ const register = (req, res) => {
   };
 
   global.users.push(newUser);
-  global.user_id = newUser; // Set global.user_id to the created user object
+  global.user_id = newUser.id;
 
   res.status(201).json({
     name: newUser.name,
@@ -30,10 +30,10 @@ const logon = (req, res) => {
   );
 
   if (!user) {
-    return res.status(401).json({ error: "Invalid credentials" });
+    return res.sendStatus(401);
   }
 
-  global.user_id = user;
+  global.user_id = user.id;
 
   res.status(200).json({
     name: user.name,
@@ -43,7 +43,7 @@ const logon = (req, res) => {
 
 const logoff = (req, res) => {
   global.user_id = null;
-  res.status(200).json({ message: "Logged out successfully" });
+  res.sendStatus(200);
 };
 
 module.exports = {
