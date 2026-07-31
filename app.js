@@ -1,5 +1,7 @@
 const express = require("express");
 const userRoutes = require("./routes/userRoutes");
+const authMiddleware = require("./middleware/auth");
+const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
 
@@ -15,6 +17,9 @@ app.use(express.json());
 
 // 2. Mount the user router at /api/users
 app.use("/api/users", userRoutes);
+
+// 2a. Mount the task router at /api/tasks and protect with auth middleware
+app.use("/api/tasks", authMiddleware, taskRoutes);
 
 // 3. Add not-found middleware
 app.use(notFound);
