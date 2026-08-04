@@ -59,11 +59,7 @@ const register = async (req, res, next) => {
 
   const newUser = user.rows[0];
   // Store the newly registered user id in the app session for later task ownership checks.
-  global.user_id = {
-    id: newUser.id,
-    name: newUser.name,
-    email: newUser.email,
-  };
+  global.user_id = newUser.id;
 
   return res.status(201).json({
     name: newUser.name,
@@ -91,11 +87,7 @@ const logon = async (req, res, next) => {
       return res.status(401).json({ message: "Authentication failed" });
     }
 
-    global.user_id = {
-      id: dbUser.id,
-      name: dbUser.name,
-      email: dbUser.email,
-    };
+    global.user_id = dbUser.id;
 
     return res.status(200).json({
       name: dbUser.name,

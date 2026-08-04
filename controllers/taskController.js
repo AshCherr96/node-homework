@@ -101,6 +101,10 @@ async function update(req, res) {
   if (taskChange.userId) delete taskChange.userId;
   if (taskChange.id) delete taskChange.id;
 
+  if (Object.keys(taskChange).length === 0) {
+    return res.status(400).json({ message: "No fields to update" });
+  }
+
   // Map camelCase request keys to the database's snake_case column names.
   const keys = Object.keys(taskChange).map((key) =>
     key === "isCompleted" ? "is_completed" : key,
