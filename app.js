@@ -43,13 +43,23 @@ const server = app.listen(port, () => {
 
 // Graceful shutdown handler
 const shutdown = async () => {
-  console.log("Shutting down gracefully...");
-  server.close(async () => {
-    console.log("HTTP server closed.");
-    await pool.end();
-    console.log("Database pool has ended.");
-    process.exit(0);
-  });
+  try {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      try {
+        console.log("HTTP server closed.");
+        await pool.end();
+        console.log("Database pool has ended.");
+        process.exit(0);
+      } catch (dbError) {
+        console.error("Error closing database pool:", dbError);
+        process.exit(1);
+      }
+    });
+  } catch (err) {
+    console.error("Error during graceful shutdown:", err);
+    process.exit(1);
+  }
 };
 
 process.on("SIGTERM", shutdown);
