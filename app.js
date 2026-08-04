@@ -4,6 +4,7 @@ const authMiddleware = require("./middleware/auth");
 const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
+const pool = require("./db/pg-pool");
 
 const app = express();
 
@@ -18,8 +19,18 @@ app.use(express.json());
 // 2. Mount the user router at /api/users
 app.use("/api/users", userRoutes);
 
-// 2a. Mount the task router at /api/tasks and protect with auth middleware
+// Mount the task router at /api/tasks and protect with auth middleware
 app.use("/api/tasks", authMiddleware, taskRoutes);
+
+// Health check endpoint verifying database connectivity
+app.get("/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok", db: "connected" });
+  } catch (err) {
+    res.status(500).json({ message: `db not connected, error: ${err.message}` });
+  }
+});
 
 // 3. Add not-found middleware
 app.use(notFound);
@@ -31,5 +42,19 @@ const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
   console.log(`Server is listening on port ${port}...`);
 });
+
+// Graceful shutdown handler
+const shutdown = async () => {
+  console.log("Shutting down gracefully...");
+  server.close(async () => {
+    console.log("HTTP server closed.");
+    await pool.end();
+    console.log("Database pool has ended.");
+    process.exit(0);
+  });
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 module.exports = { app, server };
