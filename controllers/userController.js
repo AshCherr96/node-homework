@@ -7,7 +7,7 @@ const { userSchema } = require("../validation/userSchema");
 
 const scrypt = util.promisify(crypto.scrypt);
 
-// Keep the authenticated user id in a simple session variable.
+// Keep the authenticated user id in a simple session variable for the app.
 global.user_id = global.user_id || null;
 
 async function hashPassword(password) {
@@ -58,6 +58,7 @@ const register = async (req, res, next) => {
   }
 
   const newUser = user.rows[0];
+  // Store the newly registered user id in the app session for later task ownership checks.
   global.user_id = {
     id: newUser.id,
     name: newUser.name,
@@ -79,6 +80,7 @@ const logon = async (req, res, next) => {
     const dbUser = result.rows[0];
 
     if (!dbUser) {
+      // The account must exist in the database before password verification can proceed.
       return res.status(401).json({ message: "Authentication failed" });
     }
 
@@ -105,6 +107,7 @@ const logon = async (req, res, next) => {
 };
 
 const logoff = (req, res) => {
+  // Clear the active session-only user id after a user logs out.
   global.user_id = null;
   res.sendStatus(200);
 };

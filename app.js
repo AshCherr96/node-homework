@@ -8,7 +8,7 @@ const pool = require("./db/pg-pool");
 
 const app = express();
 
-// Track only the authenticated user id for the DB-backed session.
+// Track the authenticated user id for the DB-backed session.
 global.user_id = null;
 
 // 1. Use express.json() before routes

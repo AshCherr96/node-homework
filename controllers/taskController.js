@@ -2,19 +2,19 @@ const pool = require("../db/pg-pool");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 
 function getCurrentUserId() {
-  // Tests may set global.user_id to a raw numeric id; login sets an object.
-  if (typeof global.user_id === "number") return global.user_id;
-  return global.user_id?.id ?? null;
+  // Accept either the numeric test id or the object returned after a successful login.
+  return typeof global.user_id === "number"
+    ? global.user_id
+    : global.user_id?.id ?? null;
 }
 
 function normalizeTaskResponse(taskRow) {
-  // Keep task responses consistent for both DB snake_case and camelCase callers.
   if (!taskRow) return taskRow;
 
   return {
-    ...taskRow,
-    isCompleted: taskRow.is_completed ?? taskRow.isCompleted,
-    is_completed: taskRow.is_completed ?? taskRow.isCompleted,
+    id: taskRow.id,
+    title: taskRow.title,
+    is_completed: taskRow.is_completed,
   };
 }
 
