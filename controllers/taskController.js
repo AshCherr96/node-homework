@@ -2,8 +2,20 @@ const pool = require("../db/pg-pool");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 
 function getCurrentUserId() {
+  // Tests may set global.user_id to a raw numeric id; login sets an object.
   if (typeof global.user_id === "number") return global.user_id;
   return global.user_id?.id ?? null;
+}
+
+function normalizeTaskResponse(taskRow) {
+  // Keep task responses consistent for both DB snake_case and camelCase callers.
+  if (!taskRow) return taskRow;
+
+  return {
+    ...taskRow,
+    isCompleted: taskRow.is_completed ?? taskRow.isCompleted,
+    is_completed: taskRow.is_completed ?? taskRow.isCompleted,
+  };
 }
 
 async function create(req, res) {
@@ -19,7 +31,7 @@ async function create(req, res) {
   }
 
   const userId = getCurrentUserId();
-  if (!userId) return res.sendStatus(401);
+  if (!userId) return res.sendStatus(401); // No logged-in user means task creation is not allowed.
 
   // Persist the validated task in the database and return only safe fields.
   const task = await pool.query(
@@ -28,12 +40,12 @@ async function create(req, res) {
     [value.title, value.isCompleted, userId],
   );
 
-  return res.status(201).json(task.rows[0]);
+  return res.status(201).json(normalizeTaskResponse(task.rows[0]));
 }
 
 async function index(req, res) {
   const userId = getCurrentUserId();
-  if (!userId) return res.sendStatus(401);
+  if (!userId) return res.sendStatus(401); // Authenticated user id is required for this list.
 
   // Scope the query to the currently authenticated user so they only see their own tasks.
   const tasks = await pool.query(
@@ -43,14 +55,14 @@ async function index(req, res) {
 
   if (tasks.rows.length === 0) return res.sendStatus(404);
 
-  return res.status(200).json(tasks.rows);
+  return res.status(200).json(tasks.rows.map(normalizeTaskResponse));
 }
 
 async function show(req, res) {
   const taskId = parseInt(req.params?.id, 10);
   const userId = getCurrentUserId();
 
-  if (!userId) return res.sendStatus(401);
+  if (!userId) return res.sendStatus(401); // Only a logged-in user can fetch a task.
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   // Pull only the requested task if it belongs to the current user.
@@ -63,7 +75,7 @@ async function show(req, res) {
 
   if (task.rows.length === 0) return res.sendStatus(404);
 
-  return res.status(200).json(task.rows[0]);
+  return res.status(200).json(normalizeTaskResponse(task.rows[0]));
 }
 
 async function update(req, res) {
@@ -107,14 +119,14 @@ async function update(req, res) {
 
   if (updatedTask.rows.length === 0) return res.sendStatus(404);
 
-  return res.status(200).json(updatedTask.rows[0]);
+  return res.status(200).json(normalizeTaskResponse(updatedTask.rows[0]));
 }
 
 async function deleteTask(req, res) {
   const taskId = parseInt(req.params?.id, 10);
   const userId = getCurrentUserId();
 
-  if (!userId) return res.sendStatus(401);
+  if (!userId) return res.sendStatus(401); // Deletion requires an authenticated owner.
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   // Only delete a task when both the task id and the current user's id match.
@@ -127,7 +139,7 @@ async function deleteTask(req, res) {
 
   if (deletedTask.rows.length === 0) return res.sendStatus(404);
 
-  return res.status(200).json(deletedTask.rows[0]);
+  return res.status(200).json(normalizeTaskResponse(deletedTask.rows[0]));
 }
 
 module.exports = {

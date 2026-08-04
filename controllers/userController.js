@@ -7,7 +7,7 @@ const { userSchema } = require("../validation/userSchema");
 
 const scrypt = util.promisify(crypto.scrypt);
 
-global.users = global.users || [];
+// Keep the authenticated user id in a simple session variable.
 global.user_id = global.user_id || null;
 
 async function hashPassword(password) {
@@ -79,25 +79,7 @@ const logon = async (req, res, next) => {
     const dbUser = result.rows[0];
 
     if (!dbUser) {
-      const legacyUser = global.users.find((u) => u.email === email);
-      const goodCredentials =
-        legacyUser &&
-        (await comparePassword(password, legacyUser.hashedPassword));
-
-      if (!goodCredentials) {
-        return res.status(401).json({ message: "Authentication failed" });
-      }
-
-      global.user_id = {
-        id: legacyUser.id,
-        name: legacyUser.name,
-        email: legacyUser.email,
-      };
-
-      return res.status(200).json({
-        name: legacyUser.name,
-        email: legacyUser.email,
-      });
+      return res.status(401).json({ message: "Authentication failed" });
     }
 
     // Compare the submitted password with the stored password hash.
