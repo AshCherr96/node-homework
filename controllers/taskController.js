@@ -59,8 +59,6 @@ async function index(req, res) {
     [userId],
   );
 
-  if (tasks.rows.length === 0) return res.sendStatus(404);
-
   return res.status(200).json(tasks.rows.map(normalizeTaskResponse));
 }
 
