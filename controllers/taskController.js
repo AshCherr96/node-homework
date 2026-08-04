@@ -33,11 +33,17 @@ async function create(req, res) {
   const userId = getCurrentUserId();
   if (!userId) return res.sendStatus(401); // No logged-in user means task creation is not allowed.
 
+  // Map the validated camelCase request field to the database's snake_case column name.
+  const taskInsert = {
+    title: value.title,
+    is_completed: value.isCompleted ?? false,
+  };
+
   // Persist the validated task in the database and return only safe fields.
   const task = await pool.query(
     `INSERT INTO tasks (title, is_completed, user_id)
     VALUES ($1, $2, $3) RETURNING id, title, is_completed`,
-    [value.title, value.isCompleted, userId],
+    [taskInsert.title, taskInsert.is_completed, userId],
   );
 
   return res.status(201).json(normalizeTaskResponse(task.rows[0]));
@@ -52,8 +58,6 @@ async function index(req, res) {
     "SELECT id, title, is_completed FROM tasks WHERE user_id = $1",
     [userId],
   );
-
-  if (tasks.rows.length === 0) return res.sendStatus(404);
 
   return res.status(200).json(tasks.rows.map(normalizeTaskResponse));
 }
