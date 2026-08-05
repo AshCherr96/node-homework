@@ -185,14 +185,16 @@ describe("getting created tasks", () => {
     expect(saveData[0].title).toBe("first task");
   });
 
-  it("If get the list of tasks using the userId from user2, you get a 404.", async () => {
+  it("If get the list of tasks using the userId from user2, you get a 200 with an empty array.", async () => {
     const req = httpMocks.createRequest({
       method: "GET",
     });
     global.user_id = user2;
     saveRes = httpMocks.createResponse();
     await index(req, saveRes);
-    expect(saveRes.statusCode).toBe(404);
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData).toEqual([]);
   });
   it("You can retrieve the first array object using the `show()` method of the controller.", async () => {
     const req = httpMocks.createRequest({
@@ -249,14 +251,16 @@ describe("testing the update and delete of tasks.", () => {
     await deleteTask(req, saveRes);
     expect(saveRes.statusCode).toBe(200);
   });
-  it("Retrieving user1's tasks now returns a 404.", async () => {
+  it("Retrieving user1's tasks now returns a 200 with an empty array.", async () => {
     const req = httpMocks.createRequest({
       method: "GET",
     });
     global.user_id = user1;
     saveRes = httpMocks.createResponse();
     await index(req, saveRes);
-    expect(saveRes.statusCode).toBe(404);
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData).toEqual([]);
   });
 });
 
