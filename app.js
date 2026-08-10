@@ -5,6 +5,8 @@ const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
 const pool = require("./db/pg-pool");
+const prisma = require("./db/prisma");
+
 
 const app = express();
 
@@ -21,20 +23,30 @@ app.use("/api/users", userRoutes);
 app.use("/api/tasks", authMiddleware, taskRoutes);
 
 // Health check endpoint verifying database connectivity
-app.get("/health", async (req, res) => {
+app.get('/health', async (req, res) => {
   try {
-    await pool.query("SELECT 1");
-    res.json({ status: "ok", db: "connected" });
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'connected' });
   } catch (err) {
-    res.status(500).json({ message: `db not connected, error: ${err.message}` });
+    res.status(500).json({ status: 'error', db: 'not connected', error: err.message });
   }
 });
+
 
 // 3. Add not-found middleware
 app.use(notFound);
 
 // 4. Add error-handler middleware at the end
-app.use(errorHandler);
+app.use((err, req, res, next) => {
+  if (err.name === "PrismaClientInitializationError") {
+    console.error("Couldn't connect to the database. Is it running?");
+  }
+
+  // Existing error handling logic...
+  console.error(err);
+  res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
+});
+
 
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
@@ -48,11 +60,20 @@ const shutdown = async () => {
     server.close(async () => {
       try {
         console.log("HTTP server closed.");
-        await pool.end();
-        console.log("Database pool has ended.");
+
+        // End pg pool if it exists
+        if (pool) {
+          await pool.end();
+          console.log("Database pool has ended.");
+        }
+
+        // Disconnect Prisma client
+        await prisma.$disconnect();
+        console.log("Prisma disconnected.");
+
         process.exit(0);
       } catch (dbError) {
-        console.error("Error closing database pool:", dbError);
+        console.error("Error closing database connections:", dbError);
         process.exit(1);
       }
     });
