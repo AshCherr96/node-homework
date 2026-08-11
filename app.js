@@ -3,9 +3,8 @@ const userRoutes = require("./routes/userRoutes");
 const authMiddleware = require("./middleware/auth");
 const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
-const errorHandler = require("./middleware/error-handler");
+const errorHandler = require("./middleware/error-handler"); 
 const prisma = require("./db/prisma");
-
 
 const app = express();
 
@@ -31,22 +30,8 @@ app.get('/health', async (req, res) => {
   }
 });
 
-
-// Global error handler middleware
-app.use((err, req, res, next) => {
-  // Prisma initialization check near the top
-  if (err.name === "PrismaClientInitializationError") {
-    console.error("Couldn't connect to the database. Is it running?");
-  }
-
-  // Rest of your error handling logic
-  console.error(err.constructor.name, err.message);
-  console.error(err.stack);
-  
-  return res.status(500).json({ error: "Internal server error" });
-});
-
-
+// Use the imported shared error handler middleware as the final middleware
+app.use(errorHandler);
 
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
@@ -60,7 +45,6 @@ const shutdown = async () => {
     server.close(async () => {
       try {
         console.log("HTTP server closed.");
-
 
         // Disconnect Prisma client
         await prisma.$disconnect();

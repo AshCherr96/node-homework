@@ -91,7 +91,7 @@ async function show(req, res, next) {
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   try {
-    const task = await prisma.task.findUnique({
+    const task = await prisma.task.findUniqueOrThrow({
       where: {
         id_userId: {
           id: taskId,
@@ -104,10 +104,6 @@ async function show(req, res, next) {
         isCompleted: true,
       },
     });
-
-    if (!task) {
-      return res.status(404).json({ message: "The task was not found." });
-    }
 
     return res.status(200).json({
       id: task.id,
@@ -142,9 +138,18 @@ async function update(req, res, next) {
   if (!userId) return res.sendStatus(401);
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
+  // Construct a clean, explicitly mapped data object matching the Prisma schema shape
+  const updateData = {};
+  if (value.title !== undefined) updateData.title = value.title;
+  if (value.isCompleted !== undefined) updateData.isCompleted = value.isCompleted;
+  // Fallback check if validation allowed an alternate snake_case key
+  if (value.is_completed !== undefined && value.isCompleted === undefined) {
+    updateData.isCompleted = value.is_completed;
+  }
+
   try {
     const task = await prisma.task.update({
-      data: value,
+      data: updateData,
       where: {
         id_userId: {
           id: taskId,
