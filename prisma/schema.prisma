@@ -17,7 +17,6 @@ model User {
   hashedPassword String   @db.VarChar(255) @map("hashed_password")
   createdAt      DateTime @default(now()) @db.Timestamp(6) @map("created_at")
   Task           Task[]
-  
   @@map("users")
 }
 
@@ -28,9 +27,6 @@ model Task {
   userId       Int      @map("user_id")
   createdAt    DateTime @default(now()) @db.Timestamp(6) @map("created_at")
   User         User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  
   @@unique([id, userId])
   @@map("tasks")
 }
-
-

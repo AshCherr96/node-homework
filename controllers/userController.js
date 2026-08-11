@@ -50,9 +50,9 @@ const register = async (req, res, next) => {
         hashedPassword: value.hashedPassword,
       },
       select: {
-        id: true,
         name: true,
         email: true,
+        id: true,
       },
     });
   } catch (err) {
@@ -76,8 +76,8 @@ const logon = async (req, res, next) => {
   let { email, password } = req.body;
 
   try {
-    email = email.toLowerCase();
-
+    email = email.toLowerCase(); 
+    
     const dbUser = await prisma.user.findUnique({
       where: { email }
     });

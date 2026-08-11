@@ -1,5 +1,3 @@
-// controllers/taskController.js
-
 const prisma = require("../db/prisma");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 
@@ -41,12 +39,15 @@ async function create(req, res, next) {
       data: {
         title: value.title,
         isCompleted: isCompleted,
-        userId: userId,
+        userId: userId, // Associate the task with the logged-in user
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: { 
+        id: true, 
+        title: true, 
+        isCompleted: true 
+      },
     });
 
-    // Return isCompleted in camelCase as expected by tests
     return res.status(201).json({
       id: task.id,
       title: task.title,
@@ -57,15 +58,22 @@ async function create(req, res, next) {
   }
 }
 
+// Get all tasks for the logged-in user (named index to match exports)
 async function index(req, res, next) {
   const userId = getCurrentUserId();
   if (!userId) return res.sendStatus(401);
 
   try {
     const tasks = await prisma.task.findMany({
-      where: { userId: userId },
+      where: {
+        userId: userId, // Only retrieve tasks belonging to this user
+      },
       orderBy: { id: "asc" },
-      select: { id: true, title: true, isCompleted: true },
+      select: { 
+        id: true,
+        title: true, 
+        isCompleted: true 
+      },
     });
 
     if (tasks.length === 0) {
@@ -139,14 +147,14 @@ async function update(req, res, next) {
 
   try {
     const task = await prisma.task.update({
+      data: value,
       where: {
         id_userId: {
           id: taskId,
           userId: userId,
         },
       },
-      data: value,
-      select: { id: true, title: true, isCompleted: true },
+      select: { title: true, isCompleted: true, id: true },
     });
 
     return res.status(200).json(normalizeTaskResponse(task));
@@ -154,7 +162,7 @@ async function update(req, res, next) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });
     } else {
-      return next(err);
+      return next(err); // pass other errors to the global error handler
     }
   }
 }

@@ -4,7 +4,6 @@ const authMiddleware = require("./middleware/auth");
 const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
-const pool = require("./db/pg-pool");
 const prisma = require("./db/prisma");
 
 
@@ -37,15 +36,15 @@ app.get('/health', async (req, res) => {
 app.use(notFound);
 
 // 4. Add error-handler middleware at the end
-app.use((err, req, res, next) => {
-  if (err.name === "PrismaClientInitializationError") {
+if (err.name === "PrismaClientInitializationError") {
     console.error("Couldn't connect to the database. Is it running?");
   }
 
-  // Existing error handling logic...
-  console.error(err);
-  res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
-});
+  // existing error handling code follows...
+  console.error(err.constructor.name, err.message);
+  console.error(err.stack);
+  res.status(500).json({ error: "Internal server error" });
+
 
 
 const port = process.env.PORT || 3000;
@@ -69,7 +68,7 @@ const shutdown = async () => {
 
         // Disconnect Prisma client
         await prisma.$disconnect();
-        console.log("Prisma disconnected.");
+        console.log("Prisma disconnected");
 
         process.exit(0);
       } catch (dbError) {
