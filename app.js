@@ -32,18 +32,19 @@ app.get('/health', async (req, res) => {
 });
 
 
-// 3. Add not-found middleware
-app.use(notFound);
-
-// 4. Add error-handler middleware at the end
-if (err.name === "PrismaClientInitializationError") {
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  // Prisma initialization check near the top
+  if (err.name === "PrismaClientInitializationError") {
     console.error("Couldn't connect to the database. Is it running?");
   }
 
-  // existing error handling code follows...
+  // Rest of your error handling logic
   console.error(err.constructor.name, err.message);
   console.error(err.stack);
-  res.status(500).json({ error: "Internal server error" });
+  
+  return res.status(500).json({ error: "Internal server error" });
+});
 
 
 

@@ -13,7 +13,7 @@ function normalizeTaskResponse(taskRow) {
   return {
     id: taskRow.id,
     title: taskRow.title,
-    is_completed: taskRow.is_completed ?? taskRow.isCompleted,
+    isCompleted: taskRow.isCompleted ?? taskRow.is_completed,
   };
 }
 
@@ -39,7 +39,7 @@ async function create(req, res, next) {
       data: {
         title: value.title,
         isCompleted: isCompleted,
-        userId: userId, // Associate the task with the logged-in user
+        userId: userId,
       },
       select: { 
         id: true, 
@@ -58,16 +58,13 @@ async function create(req, res, next) {
   }
 }
 
-// Get all tasks for the logged-in user (named index to match exports)
 async function index(req, res, next) {
   const userId = getCurrentUserId();
   if (!userId) return res.sendStatus(401);
 
   try {
     const tasks = await prisma.task.findMany({
-      where: {
-        userId: userId, // Only retrieve tasks belonging to this user
-      },
+      where: { userId: userId },
       orderBy: { id: "asc" },
       select: { 
         id: true,
@@ -75,10 +72,6 @@ async function index(req, res, next) {
         isCompleted: true 
       },
     });
-
-    if (tasks.length === 0) {
-      return res.sendStatus(404);
-    }
 
     return res.status(200).json(tasks);
   } catch (err) {
@@ -115,7 +108,7 @@ async function show(req, res, next) {
     return res.status(200).json({
       id: task.id,
       title: task.title,
-      is_completed: task.isCompleted,
+      isCompleted: task.isCompleted,
     });
   } catch (err) {
     if (err.code === "P2025") {
@@ -154,15 +147,15 @@ async function update(req, res, next) {
           userId: userId,
         },
       },
-      select: { title: true, isCompleted: true, id: true },
+      select: { id: true, title: true, isCompleted: true },
     });
 
-   
+    return res.status(200).json(normalizeTaskResponse(task));
   } catch (err) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });
     } else {
-      return next(err); // pass other errors to the global error handler
+      return next(err);
     }
   }
 }
@@ -192,7 +185,7 @@ async function deleteTask(req, res, next) {
     return res.status(200).json({
       id: deletedTask.id,
       title: deletedTask.title,
-      is_completed: deletedTask.isCompleted,
+      isCompleted: deletedTask.isCompleted,
     });
   } catch (err) {
     if (err.code === "P2025") {
