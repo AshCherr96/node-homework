@@ -49,14 +49,7 @@ const shutdown = async () => {
       try {
         console.log("HTTP server closed.");
 
-        // Clean up old pg pool if it exists in your project scope
-        const pool = require("./db/pool"); 
-        if (pool && typeof pool.end === "function") {
-          await pool.end();
-          console.log("Old database pool closed.");
-        }
-
-        // Disconnect Prisma client
+        // Disconnect Prisma client directly
         await prisma.$disconnect();
         console.log("Prisma disconnected");
 
