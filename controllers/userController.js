@@ -72,36 +72,33 @@ const register = async (req, res, next) => {
 };
 
 // User logon
-const logon = async (req, res, next) => {
-  let { email, password } = req.body;
+async function logon(req, res, next) {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
+  }
 
   try {
-    email = email.toLowerCase(); 
-    
-    const dbUser = await prisma.user.findUnique({
-      where: { email }
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
     });
 
-    if (!dbUser) {
-      return res.status(401).json({ message: "Authentication failed" });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    const goodCredentials = await comparePassword(password, dbUser.hashedPassword);
-
-    if (!goodCredentials) {
-      return res.status(401).json({ message: "Authentication failed" });
+    const passwordMatch = await bcrypt.compare(password, user.hashedPassword);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    global.user_id = dbUser.id;
-
-    return res.status(200).json({
-      name: dbUser.name,
-      email: dbUser.email,
-    });
+    global.user_id = user.id;
+    return res.status(200).json({ message: "Logged on successfully.", name: user.name });
   } catch (err) {
-    next(err);
+    return next(err);
   }
-};
+}
 
 // User logoff
 const logoff = (req, res) => {

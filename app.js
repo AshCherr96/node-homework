@@ -24,9 +24,9 @@ app.use("/api/tasks", authMiddleware, taskRoutes);
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', db: 'connected' });
+    return res.status(200).json({ status: 'ok', db: 'connected' });
   } catch (err) {
-    res.status(500).json({ status: 'error', db: 'not connected', error: err.message });
+    return res.status(500).json({ status: 'error', db: 'not connected', error: err.message });
   }
 });
 
@@ -48,6 +48,13 @@ const shutdown = async () => {
     server.close(async () => {
       try {
         console.log("HTTP server closed.");
+
+        // Clean up old pg pool if it exists in your project scope
+        const pool = require("./db/pool"); 
+        if (pool && typeof pool.end === "function") {
+          await pool.end();
+          console.log("Old database pool closed.");
+        }
 
         // Disconnect Prisma client
         await prisma.$disconnect();
