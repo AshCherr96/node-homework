@@ -142,11 +142,9 @@ async function update(req, res, next) {
   if (!userId) return res.sendStatus(401);
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
-  // Construct a clean, explicitly mapped data object matching the Prisma schema shape
   const updateData = {};
   if (value.title !== undefined) updateData.title = value.title;
   if (value.isCompleted !== undefined) updateData.isCompleted = value.isCompleted;
-  // Fallback check if validation allowed an alternate snake_case key
   if (value.is_completed !== undefined && value.isCompleted === undefined) {
     updateData.isCompleted = value.is_completed;
   }
@@ -163,7 +161,7 @@ async function update(req, res, next) {
       select: { id: true, title: true, isCompleted: true },
     });
 
-    return res.status(200).json(normalizeTaskResponse(task));
+    return res.status(200).json(task);
   } catch (err) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });

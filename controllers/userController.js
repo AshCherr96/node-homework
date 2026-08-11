@@ -1,9 +1,8 @@
 const crypto = require("crypto");
 const util = require("util");
+const scrypt = util.promisify(crypto.scrypt);
 const prisma = require("../db/prisma");
 const { userSchema } = require("../validation/userSchema");
-
-const scrypt = util.promisify(crypto.scrypt);
 
 // Keep the authenticated user id in a simple session variable for the app.
 global.user_id = global.user_id || null;
@@ -56,7 +55,7 @@ const register = async (req, res, next) => {
       },
     });
   } catch (err) {
-    if (err.name === "PrismaClientKnownRequestError" && err.code === "P2002") {
+    if (err.code === "P2002") {
       return res.status(400).json({ message: "Email already registered" });
     } else {
       return next(err);
@@ -88,7 +87,7 @@ async function logon(req, res, next) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.hashedPassword);
+    const passwordMatch = await comparePassword(password, user.hashedPassword);
     if (!passwordMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
@@ -105,7 +104,6 @@ const logoff = (req, res) => {
   global.user_id = null;
   res.sendStatus(200);
 };
-
 
 module.exports = {
   register,
