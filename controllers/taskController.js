@@ -73,6 +73,10 @@ async function index(req, res, next) {
       },
     });
 
+    if (tasks.length === 0) {
+      return res.sendStatus(404);
+    }
+
     return res.status(200).json(tasks);
   } catch (err) {
     return next(err);
