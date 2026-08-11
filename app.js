@@ -30,6 +30,9 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Use the not-found middleware for unmatched routes
+app.use(notFound);
+
 // Use the imported shared error handler middleware as the final middleware
 app.use(errorHandler);
 
