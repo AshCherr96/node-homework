@@ -60,11 +60,6 @@ const shutdown = async () => {
       try {
         console.log("HTTP server closed.");
 
-        // End pg pool if it exists
-        if (pool) {
-          await pool.end();
-          console.log("Database pool has ended.");
-        }
 
         // Disconnect Prisma client
         await prisma.$disconnect();

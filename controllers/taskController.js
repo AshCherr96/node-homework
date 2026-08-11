@@ -157,7 +157,7 @@ async function update(req, res, next) {
       select: { title: true, isCompleted: true, id: true },
     });
 
-    return res.status(200).json(normalizeTaskResponse(task));
+   
   } catch (err) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });
