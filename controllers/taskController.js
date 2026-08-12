@@ -1,6 +1,4 @@
-// controllers/taskController.js
-
-const pool = require("../db/pg-pool");
+const prisma = require("../db/prisma");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 
 function getCurrentUserId() {
@@ -15,7 +13,7 @@ function normalizeTaskResponse(taskRow) {
   return {
     id: taskRow.id,
     title: taskRow.title,
-    is_completed: taskRow.is_completed,
+    isCompleted: taskRow.isCompleted ?? taskRow.is_completed,
   };
 }
 
@@ -37,13 +35,24 @@ async function create(req, res, next) {
   const isCompleted = value.isCompleted ?? value.is_completed ?? false;
 
   try {
-    const task = await pool.query(
-      `INSERT INTO tasks (title, is_completed, user_id)
-      VALUES ($1, $2, $3) RETURNING id, title, is_completed`,
-      [value.title, isCompleted, userId],
-    );
+    const task = await prisma.task.create({
+      data: {
+        title: value.title,
+        isCompleted: isCompleted,
+        userId: userId,
+      },
+      select: { 
+        id: true, 
+        title: true, 
+        isCompleted: true 
+      },
+    });
 
-    return res.status(201).json(normalizeTaskResponse(task.rows[0]));
+    return res.status(201).json({
+      id: task.id,
+      title: task.title,
+      isCompleted: task.isCompleted,
+    });
   } catch (err) {
     return next(err);
   }
@@ -54,12 +63,21 @@ async function index(req, res, next) {
   if (!userId) return res.sendStatus(401);
 
   try {
-    const tasks = await pool.query(
-      "SELECT id, title, is_completed FROM tasks WHERE user_id = $1 ORDER BY id ASC",
-      [userId],
-    );
+    const tasks = await prisma.task.findMany({
+      where: { userId: userId },
+      orderBy: { id: "asc" },
+      select: { 
+        id: true,
+        title: true, 
+        isCompleted: true 
+      },
+    });
 
-    return res.status(200).json(tasks.rows.map(normalizeTaskResponse));
+    if (tasks.length === 0) {
+      return res.sendStatus(404);
+    }
+
+    return res.status(200).json(tasks);
   } catch (err) {
     return next(err);
   }
@@ -73,18 +91,35 @@ async function show(req, res, next) {
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   try {
-    const task = await pool.query(
-      `SELECT id, title, is_completed
-      FROM tasks
-      WHERE id = $1 AND user_id = $2`,
-      [taskId, userId],
-    );
+    const task = await prisma.task.findUnique({
+      where: {
+        id_userId: {
+          id: taskId,
+          userId: userId,
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+      },
+    });
 
-    if (task.rows.length === 0) return res.sendStatus(404);
+    if (!task) {
+      return res.status(404).json({ message: "The task was not found." });
+    }
 
-    return res.status(200).json(normalizeTaskResponse(task.rows[0]));
+    return res.status(200).json({
+      id: task.id,
+      title: task.title,
+      isCompleted: task.isCompleted,
+    });
   } catch (err) {
-    return next(err);
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "The task was not found." });
+    } else {
+      return next(err);
+    }
   }
 }
 
@@ -107,37 +142,32 @@ async function update(req, res, next) {
   if (!userId) return res.sendStatus(401);
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
-  const taskChange = { ...value };
-  if (taskChange.userId) delete taskChange.userId;
-  if (taskChange.id) delete taskChange.id;
-
-  if (taskChange.isCompleted !== undefined) {
-    taskChange.is_completed = taskChange.isCompleted;
-    delete taskChange.isCompleted;
+  const updateData = {};
+  if (value.title !== undefined) updateData.title = value.title;
+  if (value.isCompleted !== undefined) updateData.isCompleted = value.isCompleted;
+  if (value.is_completed !== undefined && value.isCompleted === undefined) {
+    updateData.isCompleted = value.is_completed;
   }
-
-  if (Object.keys(taskChange).length === 0) {
-    return res.status(400).json({ message: "No fields to update" });
-  }
-
-  const keys = Object.keys(taskChange);
-  const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
-  const idParm = `$${keys.length + 1}`;
-  const userParm = `$${keys.length + 2}`;
 
   try {
-    const updatedTask = await pool.query(
-      `UPDATE tasks SET ${setClauses}
-      WHERE id = ${idParm} AND user_id = ${userParm}
-      RETURNING id, title, is_completed`,
-      [...Object.values(taskChange), taskId, userId],
-    );
+    const task = await prisma.task.update({
+      data: updateData,
+      where: {
+        id_userId: {
+          id: taskId,
+          userId: userId,
+        },
+      },
+      select: { id: true, title: true, isCompleted: true },
+    });
 
-    if (updatedTask.rows.length === 0) return res.sendStatus(404);
-
-    return res.status(200).json(normalizeTaskResponse(updatedTask.rows[0]));
+    return res.status(200).json(task);
   } catch (err) {
-    return next(err);
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "The task was not found." });
+    } else {
+      return next(err);
+    }
   }
 }
 
@@ -149,18 +179,31 @@ async function deleteTask(req, res, next) {
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   try {
-    const deletedTask = await pool.query(
-      `DELETE FROM tasks
-      WHERE id = $1 AND user_id = $2
-      RETURNING id, title, is_completed`,
-      [taskId, userId],
-    );
+    const deletedTask = await prisma.task.delete({
+      where: {
+        id_userId: {
+          id: taskId,
+          userId: userId,
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+      },
+    });
 
-    if (deletedTask.rows.length === 0) return res.sendStatus(404);
-
-    return res.status(200).json(normalizeTaskResponse(deletedTask.rows[0]));
+    return res.status(200).json({
+      id: deletedTask.id,
+      title: deletedTask.title,
+      isCompleted: deletedTask.isCompleted,
+    });
   } catch (err) {
-    return next(err);
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "The task was not found." });
+    } else {
+      return next(err);
+    }
   }
 }
 
