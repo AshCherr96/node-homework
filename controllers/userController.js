@@ -54,10 +54,10 @@ const register = async (req, res, next) => {
         id: true,
       },
     });
-    
+
   } catch (err) {
     if (err.code === "P2002") {
-      return res.status(400).json({ message: "Email already registered." });
+      return res.status(400).json({ message: "the email was already registered." });
     } else {
       return next(err);
     }
