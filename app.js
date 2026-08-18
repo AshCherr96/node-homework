@@ -5,6 +5,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler"); 
 const prisma = require("./db/prisma");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 
@@ -19,6 +20,9 @@ app.use("/api/users", userRoutes);
 
 // Mount the task router at /api/tasks and protect with auth middleware
 app.use("/api/tasks", authMiddleware, taskRoutes);
+
+app.use("/api/analytics", authMiddleware, analyticsRoutes);
+
 
 // Health check endpoint verifying database connectivity
 app.get('/health', async (req, res) => {

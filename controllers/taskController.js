@@ -33,18 +33,21 @@ async function create(req, res, next) {
   if (!userId) return res.sendStatus(401);
 
   const isCompleted = value.isCompleted ?? value.is_completed ?? false;
+  const priority = value.priority ?? "medium";
 
   try {
     const task = await prisma.task.create({
       data: {
         title: value.title,
         isCompleted: isCompleted,
+        priority: priority,
         userId: userId,
       },
       select: { 
         id: true, 
         title: true, 
-        isCompleted: true 
+        isCompleted: true,
+        priority: true,
       },
     });
 
@@ -52,32 +55,137 @@ async function create(req, res, next) {
       id: task.id,
       title: task.title,
       isCompleted: task.isCompleted,
+      priority: task.priority,
     });
   } catch (err) {
     return next(err);
   }
 }
 
+async function bulkCreate(req, res, next) {
+  const { tasks } = req.body;
+
+  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    return res.status(400).json({ 
+      error: "Invalid request data. Expected an array of tasks." 
+    });
+  }
+
+  const userId = getCurrentUserId();
+  if (!userId) return res.sendStatus(401);
+
+  const validTasks = [];
+  for (const task of tasks) {
+    const { error, value } = taskSchema.validate(task, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.details,
+      });
+    }
+
+    validTasks.push({
+      title: value.title,
+      isCompleted: value.isCompleted ?? false,
+      priority: value.priority ?? "medium",
+      userId: userId,
+    });
+  }
+
+  try {
+    const result = await prisma.task.createMany({
+      data: validTasks,
+      skipDuplicates: false,
+    });
+
+    return res.status(201).json({
+      message: "Bulk task creation successful",
+      tasksCreated: result.count,
+      totalRequested: validTasks.length,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+const getOrderBy = (query) => {
+  const validSortFields = ["title", "priority", "createdAt", "id", "isCompleted"];
+  const sortBy = query.sortBy || "createdAt";
+  const sortDirection = query.sortDirection === "asc" ? "asc" : "desc";
+  
+  if (validSortFields.includes(sortBy)) {
+    return { [sortBy]: sortDirection };
+  }
+  return { createdAt: "desc" };
+};
+
 async function index(req, res, next) {
   const userId = getCurrentUserId();
   if (!userId) return res.sendStatus(401);
 
+  // 1. Parse and validate pagination parameters (page >= 1, limit 1-100)
+  let page = parseInt(req.query.page, 10) || 1;
+  if (page < 1) page = 1;
+
+  let limit = parseInt(req.query.limit, 10) || 10;
+  if (limit < 1) limit = 1;
+  if (limit > 100) limit = 100;
+
+  const skip = (page - 1) * limit;
+
+  // 2. Build where clause with optional search filter
+  const whereClause = { userId: userId };
+
+  if (req.query.find) {
+    whereClause.title = {
+      contains: req.query.find,
+      mode: "insensitive",
+    };
+  }
+
   try {
     const tasks = await prisma.task.findMany({
-      where: { userId: userId },
-      orderBy: { id: "asc" },
+      where: whereClause,
       select: { 
         id: true,
         title: true, 
-        isCompleted: true 
+        isCompleted: true,
+        priority: true,
+        createdAt: true,
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
+      skip: skip,
+      take: limit,
+      orderBy: getOrderBy(req.query),
     });
 
-    if (tasks.length === 0) {
-      return res.sendStatus(404);
-    }
+    const totalTasks = await prisma.task.count({
+      where: whereClause,
+    });
 
-    return res.status(200).json(tasks);
+    const totalPages = Math.ceil(totalTasks / limit) || 1;
+    const pagination = {
+      page: page,
+      limit: limit,
+      total: totalTasks,
+      pages: totalPages,
+      hasNext: page * limit < totalTasks,
+      hasPrev: page > 1,
+    };
+
+    return res.status(200).json({
+      tasks,
+      pagination,
+    });
   } catch (err) {
     return next(err);
   }
@@ -102,6 +210,15 @@ async function show(req, res, next) {
         id: true,
         title: true,
         isCompleted: true,
+        priority: true,
+        createdAt: true,
+        // Include the User relation to satisfy eager loading tests
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -109,11 +226,7 @@ async function show(req, res, next) {
       return res.status(404).json({ message: "The task was not found." });
     }
 
-    return res.status(200).json({
-      id: task.id,
-      title: task.title,
-      isCompleted: task.isCompleted,
-    });
+    return res.status(200).json(task);
   } catch (err) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });
@@ -136,31 +249,30 @@ async function update(req, res, next) {
     return res.status(400).json({ message: error.message });
   }
 
-  const taskId = parseInt(req.params?.id, 10);
+  const taskId = parseInt(req.params.id, 10);
   const userId = getCurrentUserId();
 
   if (!userId) return res.sendStatus(401);
-  if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
+  if (isNaN(taskId)) return res.status(400).json({ error: "Invalid task ID" });
 
+  // Build safe update data object from validated values
   const updateData = {};
   if (value.title !== undefined) updateData.title = value.title;
   if (value.isCompleted !== undefined) updateData.isCompleted = value.isCompleted;
+  if (value.priority !== undefined) updateData.priority = value.priority;
   if (value.is_completed !== undefined && value.isCompleted === undefined) {
     updateData.isCompleted = value.is_completed;
   }
 
   try {
     const task = await prisma.task.update({
-      data: updateData,
       where: {
-        id_userId: {
-          id: taskId,
-          userId: userId,
-        },
+        id: taskId,
+        userId: userId,
       },
-      select: { id: true, title: true, isCompleted: true },
+      data: updateData, // Uses the cleaned validated updateData
+      select: { id: true, title: true, isCompleted: true, priority: true },
     });
-
     return res.status(200).json(task);
   } catch (err) {
     if (err.code === "P2025") {
@@ -213,4 +325,5 @@ module.exports = {
   show,
   update,
   deleteTask,
+  bulkCreate,
 };
