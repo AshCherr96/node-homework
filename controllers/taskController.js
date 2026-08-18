@@ -199,6 +199,7 @@ async function show(req, res, next) {
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   try {
+    // Use the compound unique key (id_userId) to enforce ownership securely
     const task = await prisma.task.findUnique({
       where: {
         id_userId: {
@@ -212,7 +213,7 @@ async function show(req, res, next) {
         isCompleted: true,
         priority: true,
         createdAt: true,
-        // Include the User relation to satisfy eager loading tests
+        // Include nested User relation to satisfy eager loading requirements
         User: {
           select: {
             name: true,
@@ -255,7 +256,6 @@ async function update(req, res, next) {
   if (!userId) return res.sendStatus(401);
   if (isNaN(taskId)) return res.status(400).json({ error: "Invalid task ID" });
 
-  // Build safe update data object from validated values
   const updateData = {};
   if (value.title !== undefined) updateData.title = value.title;
   if (value.isCompleted !== undefined) updateData.isCompleted = value.isCompleted;
@@ -265,12 +265,15 @@ async function update(req, res, next) {
   }
 
   try {
+    // Use the compound unique key (id_userId) for secure updates
     const task = await prisma.task.update({
       where: {
-        id: taskId,
-        userId: userId,
+        id_userId: {
+          id: taskId,
+          userId: userId,
+        },
       },
-      data: updateData, // Uses the cleaned validated updateData
+      data: updateData,
       select: { id: true, title: true, isCompleted: true, priority: true },
     });
     return res.status(200).json(task);
@@ -291,6 +294,7 @@ async function deleteTask(req, res, next) {
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
 
   try {
+    // Use the compound unique key (id_userId) for secure deletion
     const deletedTask = await prisma.task.delete({
       where: {
         id_userId: {
