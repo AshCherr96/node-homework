@@ -1,22 +1,6 @@
 const prisma = require("../db/prisma");
 const { taskSchema, patchTaskSchema } = require("../validation/taskSchema");
 
-function getCurrentUserId() {
-  return typeof global.user_id === "number"
-    ? global.user_id
-    : global.user_id?.id ?? null;
-}
-
-function normalizeTaskResponse(taskRow) {
-  if (!taskRow) return taskRow;
-
-  return {
-    id: taskRow.id,
-    title: taskRow.title,
-    isCompleted: taskRow.isCompleted ?? taskRow.is_completed,
-  };
-}
-
 async function create(req, res, next) {
   if (!req.body) req.body = {};
 
@@ -29,7 +13,7 @@ async function create(req, res, next) {
     return res.status(400).json({ message: error.message });
   }
 
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
   if (!userId) return res.sendStatus(401);
 
   const isCompleted = value.isCompleted ?? value.is_completed ?? false;
@@ -71,7 +55,7 @@ async function bulkCreate(req, res, next) {
     });
   }
 
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
   if (!userId) return res.sendStatus(401);
 
   const validTasks = [];
@@ -124,7 +108,7 @@ const getOrderBy = (query) => {
 };
 
 async function index(req, res, next) {
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
   if (!userId) return res.sendStatus(401);
 
   // 1. Parse and validate pagination parameters (page >= 1, limit 1-100)
@@ -193,7 +177,7 @@ async function index(req, res, next) {
 
 async function show(req, res, next) {
   const taskId = parseInt(req.params?.id, 10);
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
 
   if (!userId) return res.sendStatus(401);
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
@@ -251,7 +235,7 @@ async function update(req, res, next) {
   }
 
   const taskId = parseInt(req.params.id, 10);
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
 
   if (!userId) return res.sendStatus(401);
   if (isNaN(taskId)) return res.status(400).json({ error: "Invalid task ID" });
@@ -288,7 +272,7 @@ async function update(req, res, next) {
 
 async function deleteTask(req, res, next) {
   const taskId = parseInt(req.params?.id, 10);
-  const userId = getCurrentUserId();
+  const userId = req.user.id;
 
   if (!userId) return res.sendStatus(401);
   if (Number.isNaN(taskId) || taskId < 1) return res.sendStatus(400);
