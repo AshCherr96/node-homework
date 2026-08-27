@@ -1,6 +1,12 @@
+require("dotenv").config();
+
 const express = require("express");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const { xss } = require("express-xss-sanitizer");
+const rateLimiter = require("express-rate-limit");
 const userRoutes = require("./routes/userRoutes");
-const authMiddleware = require("./middleware/auth");
+const jwtMiddleware = require("./middleware/jwtMiddleware");
 const taskRoutes = require("./routes/taskRoutes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler"); 
@@ -8,20 +14,29 @@ const prisma = require("./db/prisma");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
+app.set("trust proxy", 1);
 
-// Track the authenticated user id for the DB-backed session.
-global.user_id = null;
+// Limit abusive clients before doing any further request processing.
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  }),
+);
+app.use(helmet());
 
 // 1. Use express.json() before routes
 app.use(express.json());
+app.use(cookieParser());
+app.use(xss());
 
 // 2. Mount the user router at /api/users
 app.use("/api/users", userRoutes);
 
-// Mount the task router at /api/tasks and protect with auth middleware
-app.use("/api/tasks", authMiddleware, taskRoutes);
+// Mount the task router at /api/tasks and protect with JWT middleware.
+app.use("/api/tasks", jwtMiddleware, taskRoutes);
 
-app.use("/api/analytics", authMiddleware, analyticsRoutes);
+app.use("/api/analytics", jwtMiddleware, analyticsRoutes);
 
 
 // Health check endpoint verifying database connectivity

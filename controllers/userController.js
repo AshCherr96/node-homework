@@ -1,16 +1,40 @@
+require("dotenv").config();
+
 const crypto = require("crypto");
+const { randomUUID } = require("crypto");
 const util = require("util");
 const scrypt = util.promisify(crypto.scrypt);
+const jwt = require("jsonwebtoken");
 const prisma = require("../db/prisma");
 const { userSchema } = require("../validation/userSchema");
-
-// Keep the authenticated user id in a simple session variable for the app.
-global.user_id = global.user_id || null;
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derivedKey = await scrypt(password, salt, 64);
   return `${salt}:${derivedKey.toString("hex")}`;
+}
+
+const JWT_LIFETIME_MS = 60 * 60 * 1000;
+
+const cookieFlags = (req) => {
+  void req;
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+  };
+};
+
+function setJwtCookie(req, res, user) {
+  const payload = { id: user.id, csrfToken: randomUUID() };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    algorithm: "HS256",
+    expiresIn: "1h",
+  });
+
+  // The CSRF value is returned to the client, while the JWT remains HTTP-only.
+  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: JWT_LIFETIME_MS });
+  return payload.csrfToken;
 }
 
 async function comparePassword(inputPassword, storedHash) {
@@ -114,14 +138,16 @@ async function register(req, res, next) {
       return { user: newUser, welcomeTasks };
     });
 
-    // 4. Store user ID globally for session management
-    global.user_id = result.user.id;
+    const csrfToken = setJwtCookie(req, res, result.user);
 
     // 5. Send success response with status 201
     return res.status(201).json({
       user: result.user,
+      name: result.user.name,
+      email: result.user.email,
       welcomeTasks: result.welcomeTasks,
       transactionStatus: "success",
+      csrfToken,
     });
   } catch (err) {
     // Handle P2002 errors (duplicate email)
@@ -162,8 +188,13 @@ async function logon(req, res, next) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    global.user_id = user.id;
-    return res.status(200).json({ message: "Logged on successfully.", name: user.name });
+    const csrfToken = setJwtCookie(req, res, user);
+    return res.status(200).json({
+      message: "Logged on successfully.",
+      name: user.name,
+      email: user.email,
+      csrfToken,
+    });
   } catch (err) {
     return next(err);
   }
@@ -171,13 +202,13 @@ async function logon(req, res, next) {
 
 // User logoff
 const logoff = (req, res) => {
-  global.user_id = null;
-  res.sendStatus(200);
+  res.clearCookie("jwt", cookieFlags(req));
+  return res.sendStatus(200);
 };
 
 // Example helper or method logic for dynamic field selection
 async function getTasksWithDynamicFields(req, res, next) {
- const userId = global.user_id;
+ const userId = req.user?.id;
 if (!userId) {
   return res.sendStatus(401);
 }
@@ -224,4 +255,3 @@ module.exports = {
   show,
   getTasksWithDynamicFields,
 };
-
