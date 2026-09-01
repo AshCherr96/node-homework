@@ -7,6 +7,7 @@ const { app, server } = require("../app");
 
 let agent;
 let saveRes;
+let loginRes;
 let csrfToken;
 
 const getJwtCookie = (response) => {
@@ -56,21 +57,27 @@ describe("register a user", () => {
   });
 
   it("50. logs on as the new user", async () => {
-    saveRes = await agent
+    loginRes = await agent
       .post("/api/users/logon")
       .send({ email: "jdeere@example.com", password: "Pa$$word20" });
-    csrfToken = saveRes.body.csrfToken;
-    expect(saveRes.status).toBe(200);
+    saveRes = loginRes;
+    csrfToken = loginRes.body.csrfToken;
+    expect(loginRes.status).toBe(200);
   });
 
-  it("51. logon sets a jwt cookie with HttpOnly", () => {
-    const jwtCookie = getJwtCookie(saveRes);
+  it("51. login protects /api/tasks", async () => {
+    saveRes = await agent.get("/api/tasks");
+    expect(saveRes.status).not.toBe(401);
+  });
+
+  it("52. logon sets a jwt cookie with HttpOnly", () => {
+    const jwtCookie = getJwtCookie(loginRes);
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("HttpOnly");
   });
 
-  it("52. logs out the user and clears the JWT cookie", async () => {
+  it("53. logs out the user and clears the JWT cookie", async () => {
     saveRes = await agent
       .post("/api/users/logoff")
       .set("X-CSRF-TOKEN", csrfToken);
@@ -80,5 +87,10 @@ describe("register a user", () => {
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("Jan 1970");
+  });
+
+  it("54. logout protects /api/tasks by rejecting access", async () => {
+    saveRes = await agent.get("/api/tasks");
+    expect(saveRes.status).toBe(401);
   });
 });
