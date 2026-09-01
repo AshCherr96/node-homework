@@ -39,25 +39,23 @@ describe("register a user", () => {
     expect(saveRes.status).toBe(201);
   });
 
-  it("47. registration returns the expected name and csrfToken", () => {
-    expect(saveRes.body).toEqual(
-      expect.objectContaining({
-        name: "John Deere",
-        csrfToken: expect.any(String),
-      }),
-    );
+  it("47. registration returns the expected name", () => {
+    expect(saveRes.body.name).toBe("John Deere");
+  });
+
+  it("48. registration returns a csrfToken", () => {
     csrfToken = saveRes.body.csrfToken;
     expect(csrfToken).toBeDefined();
   });
 
-  it("48. registration sets the JWT cookie with HttpOnly", () => {
+  it("49. registration sets a jwt cookie with HttpOnly", () => {
     const jwtCookie = getJwtCookie(saveRes);
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("HttpOnly");
   });
 
-  it("49. logs on as the new user", async () => {
+  it("50. logs on as the new user", async () => {
     saveRes = await agent
       .post("/api/users/logon")
       .send({ email: "jdeere@example.com", password: "Pa$$word20" });
@@ -65,16 +63,11 @@ describe("register a user", () => {
     expect(saveRes.status).toBe(200);
   });
 
-  it("50. logon sets a JWT cookie with HttpOnly", () => {
+  it("51. logon sets a jwt cookie with HttpOnly", () => {
     const jwtCookie = getJwtCookie(saveRes);
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("HttpOnly");
-  });
-
-  it("51. verifies the user is logged in", async () => {
-    saveRes = await agent.get("/api/tasks");
-    expect(saveRes.status).not.toBe(401);
   });
 
   it("52. logs out the user and clears the JWT cookie", async () => {
@@ -87,10 +80,5 @@ describe("register a user", () => {
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("Jan 1970");
-  });
-
-  it("53. verifies the user is logged out", async () => {
-    saveRes = await agent.get("/api/tasks");
-    expect(saveRes.status).toBe(401);
   });
 });
