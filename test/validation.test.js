@@ -7,10 +7,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "bob@sample.com", password: "password" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(
-      error.details.some((detail) => detail.path[0] === "password"),
-    ).toBe(true);
+    const passwordDetail = error.details.find((detail) => detail.path[0] === "password");
+    expect(passwordDetail.path[0]).toBe("password");
   });
 
   it("2. requires an email", () => {
@@ -18,8 +16,8 @@ describe("user object validation tests", () => {
       { name: "Bob", password: "Password1!" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "email")).toBeDefined();
+    const emailDetail = error.details.find((detail) => detail.path[0] === "email");
+    expect(emailDetail.path[0]).toBe("email");
   });
 
   it("3. does not accept an invalid email", () => {
@@ -27,8 +25,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "not-an-email", password: "Password1!" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "email")).toBeDefined();
+    const emailDetail = error.details.find((detail) => detail.path[0] === "email");
+    expect(emailDetail.path[0]).toBe("email");
   });
 
   it("4. requires a password", () => {
@@ -36,8 +34,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "bob@sample.com" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "password")).toBeDefined();
+    const passwordDetail = error.details.find((detail) => detail.path[0] === "password");
+    expect(passwordDetail.path[0]).toBe("password");
   });
 
   it("5. requires a name", () => {
@@ -45,8 +43,8 @@ describe("user object validation tests", () => {
       { email: "bob@sample.com", password: "Password1!" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "name")).toBeDefined();
+    const nameDetail = error.details.find((detail) => detail.path[0] === "name");
+    expect(nameDetail.path[0]).toBe("name");
   });
 
   it("6. requires a name from 3 to 30 characters", () => {
@@ -54,8 +52,8 @@ describe("user object validation tests", () => {
       { name: "Bo", email: "bob@sample.com", password: "Password1!" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "name")).toBeDefined();
+    const nameDetail = error.details.find((detail) => detail.path[0] === "name");
+    expect(nameDetail.path[0]).toBe("name");
   });
 
   it("7. returns a falsy error for a valid user", () => {
@@ -63,27 +61,24 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "bob@sample.com", password: "Password1!" },
       { abortEarly: false },
     );
-    expect(error).toBeFalsy();
+    expect(error).toBeUndefined();
   });
 });
 
 describe("task object validation tests", () => {
   it("8. requires a title", () => {
     const { error } = taskSchema.validate({}, { abortEarly: false });
-    expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "title")).toBeDefined();
+    const titleDetail = error.details.find((detail) => detail.path[0] === "title");
+    expect(titleDetail.path[0]).toBe("title");
   });
 
-  it("9. requires isCompleted to be valid when specified", () => {
+  it("9. rejects an invalid isCompleted value", () => {
     const { error } = taskSchema.validate(
       { title: "Buy milk", isCompleted: "yes" },
       { abortEarly: false },
     );
-    expect(error).toBeDefined();
-    const isCompletedError = error.details.find(
-      (detail) => detail.path[0] === "isCompleted",
-    );
-    expect(isCompletedError).toBeDefined();
+    const isCompletedDetail = error.details.find((detail) => detail.path[0] === "isCompleted");
+    expect(isCompletedDetail.path[0]).toBe("isCompleted");
   });
 
   it("10. provides false when isCompleted is omitted by schema default", () => {
@@ -109,7 +104,7 @@ describe("patch task object validation tests", () => {
       { isCompleted: true },
       { abortEarly: false },
     );
-    expect(error).toBeFalsy();
+    expect(error).toBeUndefined();
   });
 
   it("13. leaves isCompleted undefined when omitted", () => {
