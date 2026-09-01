@@ -7,8 +7,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "bob@sample.com", password: "password" },
       { abortEarly: false },
     );
-    const passwordDetail = error?.details?.find((detail) => detail.path[0] === "password");
-    expect(passwordDetail?.path?.[0]).toBe("password");
+    const passwordDetail = error?.details?.find((detail) => detail.context.key === "password");
+    expect(passwordDetail?.context?.key).toBe("password");
   });
 
   it("2. requires an email", () => {
@@ -16,8 +16,8 @@ describe("user object validation tests", () => {
       { name: "Bob", password: "Password1!" },
       { abortEarly: false },
     );
-    const emailDetail = error?.details?.find((detail) => detail.path[0] === "email");
-    expect(emailDetail?.path?.[0]).toBe("email");
+    const emailDetail = error?.details?.find((detail) => detail.context.key === "email");
+    expect(emailDetail?.context?.key).toBe("email");
   });
 
   it("3. does not accept an invalid email", () => {
@@ -25,8 +25,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "not-an-email", password: "Password1!" },
       { abortEarly: false },
     );
-    const emailDetail = error?.details?.find((detail) => detail.path[0] === "email");
-    expect(emailDetail?.path?.[0]).toBe("email");
+    const emailDetail = error?.details?.find((detail) => detail.context.key === "email");
+    expect(emailDetail?.context?.key).toBe("email");
   });
 
   it("4. requires a password", () => {
@@ -34,8 +34,8 @@ describe("user object validation tests", () => {
       { name: "Bob", email: "bob@sample.com" },
       { abortEarly: false },
     );
-    const passwordDetail = error?.details?.find((detail) => detail.path[0] === "password");
-    expect(passwordDetail?.path?.[0]).toBe("password");
+    const passwordDetail = error?.details?.find((detail) => detail.context.key === "password");
+    expect(passwordDetail?.context?.key).toBe("password");
   });
 
   it("5. requires a name", () => {
@@ -43,8 +43,8 @@ describe("user object validation tests", () => {
       { email: "bob@sample.com", password: "Password1!" },
       { abortEarly: false },
     );
-    const nameDetail = error?.details?.find((detail) => detail.path[0] === "name");
-    expect(nameDetail?.path?.[0]).toBe("name");
+    const nameDetail = error?.details?.find((detail) => detail.context.key === "name");
+    expect(nameDetail?.context?.key).toBe("name");
   });
 
   it("6. requires a name from 3 to 30 characters", () => {
@@ -52,8 +52,8 @@ describe("user object validation tests", () => {
       { name: "Bo", email: "bob@sample.com", password: "Password1!" },
       { abortEarly: false },
     );
-    const nameDetail = error?.details?.find((detail) => detail.path[0] === "name");
-    expect(nameDetail?.path?.[0]).toBe("name");
+    const nameDetail = error?.details?.find((detail) => detail.context.key === "name");
+    expect(nameDetail?.context?.key).toBe("name");
   });
 
   it("7. returns a falsy error for a valid user", () => {
@@ -68,8 +68,8 @@ describe("user object validation tests", () => {
 describe("task object validation tests", () => {
   it("8. requires a title", () => {
     const { error } = taskSchema.validate({}, { abortEarly: false });
-    const titleDetail = error?.details?.find((detail) => detail.path[0] === "title");
-    expect(titleDetail?.path?.[0]).toBe("title");
+    const titleDetail = error?.details?.find((detail) => detail.context.key === "title");
+    expect(titleDetail?.context?.key).toBe("title");
   });
 
   it("9. rejects an invalid isCompleted value", () => {
@@ -77,8 +77,8 @@ describe("task object validation tests", () => {
       { title: "Buy milk", isCompleted: "yes" },
       { abortEarly: false },
     );
-    const isCompletedDetail = error?.details?.find((detail) => detail.path[0] === "isCompleted");
-    expect(isCompletedDetail?.path?.[0]).toBe("isCompleted");
+    const isCompletedDetail = error?.details?.find((detail) => detail.context.key === "isCompleted");
+    expect(isCompletedDetail?.context?.key).toBe("isCompleted");
   });
 
   it("10. provides false when isCompleted is omitted by schema default", () => {
