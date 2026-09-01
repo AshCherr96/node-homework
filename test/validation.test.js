@@ -75,7 +75,7 @@ describe("task object validation tests", () => {
     expect(error.details.find((detail) => detail.context.key === "isCompleted")).toBeDefined();
   });
 
-  it("10. provides false when isCompleted is omitted", () => {
+  it("10. provides false when isCompleted is omitted by schema default", () => {
     const { value } = taskSchema.validate(
       { title: "Buy milk" },
       { abortEarly: false },
@@ -93,13 +93,20 @@ describe("task object validation tests", () => {
 });
 
 describe("patch task object validation tests", () => {
-  it("12. does not require a title", () => {
-    const { error } = patchTaskSchema.validate({}, { abortEarly: false });
+  it("12. allows a patch without a title and keeps other fields optional", () => {
+    const { error, value } = patchTaskSchema.validate(
+      { isCompleted: true },
+      { abortEarly: false },
+    );
     expect(error).toBeFalsy();
+    expect(value.title).toBeUndefined();
+    expect(value.priority).toBeUndefined();
+    expect(value.isCompleted).toBe(true);
   });
 
   it("13. leaves isCompleted undefined when omitted", () => {
-    const { value } = patchTaskSchema.validate({}, { abortEarly: false });
+    const { value } = patchTaskSchema.validate({ title: "Buy milk" }, { abortEarly: false });
     expect(value.isCompleted).toBeUndefined();
+    expect(value.priority).toBeUndefined();
   });
 });
