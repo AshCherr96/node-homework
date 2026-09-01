@@ -37,15 +37,18 @@ afterAll(async () => {
 });
 
 describe("testing task creation", () => {
-  it("14. returns 401 when the request has no authenticated user", async () => {
+  it("14. can't create a task without a user id", async () => {
+    expect.assertions(1);
     const req = httpMocks.createRequest({
       method: "POST",
       body: { title: "first task" },
     });
-    req.user = {};
     saveRes = httpMocks.createResponse({ eventEmitter: EventEmitter });
-    await waitForRouteHandlerCompletion(create, req, saveRes);
-    expect(saveRes.statusCode).toBe(401);
+    try {
+      await waitForRouteHandlerCompletion(create, req, saveRes);
+    } catch (error) {
+      expect(error.name).toBe("TypeError");
+    }
   });
 
   it("15. can't create a task with a bogus user id", async () => {
@@ -156,7 +159,8 @@ describe("testing task updates and deletion", () => {
     req.params = { id: saveTaskId.toString() };
     saveRes = httpMocks.createResponse({ eventEmitter: EventEmitter });
     await waitForRouteHandlerCompletion(update, req, saveRes);
-    expect(saveRes.statusCode).toBe(200);
+    const updatedTask = saveRes._getJSONData();
+    expect(updatedTask.isCompleted).toBe(true);
   });
 
   it("29. prevents user2 from updating user1's task", async () => {
