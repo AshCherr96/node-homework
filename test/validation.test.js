@@ -9,8 +9,8 @@ describe("user object validation tests", () => {
     );
     expect(error).toBeDefined();
     expect(
-      error.details.find((detail) => detail.context.key == "password"),
-    ).toBeDefined();
+      error.details.some((detail) => detail.path[0] === "password"),
+    ).toBe(true);
   });
 
   it("2. requires an email", () => {
@@ -80,7 +80,10 @@ describe("task object validation tests", () => {
       { abortEarly: false },
     );
     expect(error).toBeDefined();
-    expect(error.details.find((detail) => detail.context.key === "isCompleted")).toBeDefined();
+    const isCompletedError = error.details.find(
+      (detail) => detail.path[0] === "isCompleted",
+    );
+    expect(isCompletedError).toBeDefined();
   });
 
   it("10. provides false when isCompleted is omitted by schema default", () => {
@@ -101,7 +104,7 @@ describe("task object validation tests", () => {
 });
 
 describe("patch task object validation tests", () => {
-  it("12. does not require a title in a patch", () => {
+  it("12. accepts a valid patch without a title", () => {
     const { error } = patchTaskSchema.validate(
       { isCompleted: true },
       { abortEarly: false },

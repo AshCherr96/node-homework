@@ -44,40 +44,36 @@ describe("register a user", () => {
     expect(saveRes.body.name).toBe("John Deere");
   });
 
-  it("48. registration returns a csrfToken", () => {
+  it("48. registration returns a csrfToken and sets a jwt cookie with HttpOnly", () => {
     csrfToken = saveRes.body.csrfToken;
     expect(csrfToken).toBeDefined();
-  });
 
-  it("49. registration sets a jwt cookie with HttpOnly", () => {
     const jwtCookie = getJwtCookie(saveRes);
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("HttpOnly");
   });
 
-  it("50. logs on as the new user", async () => {
+  it("49. logs on as the new user", async () => {
     loginRes = await agent
       .post("/api/users/logon")
       .send({ email: "jdeere@example.com", password: "Pa$$word20" });
     saveRes = loginRes;
     csrfToken = loginRes.body.csrfToken;
     expect(loginRes.status).toBe(200);
-  });
 
-  it("51. login protects /api/tasks", async () => {
-    saveRes = await agent.get("/api/tasks");
-    expect(saveRes.status).not.toBe(401);
-  });
-
-  it("52. logon sets a jwt cookie with HttpOnly", () => {
     const jwtCookie = getJwtCookie(loginRes);
     expect(jwtCookie).toBeDefined();
     expect(jwtCookie).toMatch(/^jwt=/);
     expect(jwtCookie).toContain("HttpOnly");
   });
 
-  it("53. logs out the user and clears the JWT cookie", async () => {
+  it("50. login protects /api/tasks", async () => {
+    saveRes = await agent.get("/api/tasks");
+    expect(saveRes.status).not.toBe(401);
+  });
+
+  it("51. logs out the user and clears the JWT cookie", async () => {
     saveRes = await agent
       .post("/api/users/logoff")
       .set("X-CSRF-TOKEN", csrfToken);
@@ -89,7 +85,7 @@ describe("register a user", () => {
     expect(jwtCookie).toContain("Jan 1970");
   });
 
-  it("54. logout protects /api/tasks by rejecting access", async () => {
+  it("52. logout protects /api/tasks by rejecting access", async () => {
     saveRes = await agent.get("/api/tasks");
     expect(saveRes.status).toBe(401);
   });
