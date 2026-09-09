@@ -447,6 +447,145 @@ describe("testing the update and delete of tasks with priority", () => {
   });
 });
 
+describe("optional assignment coverage", () => {
+  it("33. You can create multiple tasks at once using bulkCreate.", async () => {
+    global.user_id = user1.id;
+    const req = httpMocks.createRequest({
+      method: "POST",
+      body: {
+        tasks: [
+          { title: "Bulk task 9", priority: "high" },
+          { title: "Bulk task 10", priority: "medium" },
+        ],
+      },
+    });
+    saveRes = httpMocks.createResponse();
+    await bulkCreate(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(201);
+    saveData = saveRes._getJSONData();
+    expect(saveData.tasksCreated).toBe(2);
+  });
+
+  it("35. Bulk create with invalid data returns 400.", async () => {
+    const req = httpMocks.createRequest({
+      method: "POST",
+      body: { tasks: [{ title: "" }] },
+    });
+    saveRes = httpMocks.createResponse();
+    const next = jest.fn((err) => {
+      if (err) {
+        errorHandlerMiddleware(err, req, saveRes, () => {});
+      }
+    });
+    await bulkCreate(req, saveRes, next);
+    expect(saveRes.statusCode).toBe(400);
+  });
+
+  it("36. You can get user analytics with groupBy operations.", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+      params: { id: user1.id },
+    });
+    saveRes = httpMocks.createResponse();
+    await getUserAnalytics(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData).toHaveProperty("taskStats");
+  });
+
+  it("37. The taskStats array contains groupBy results.", () => {
+    expect(saveData.taskStats.length).toBeGreaterThanOrEqual(0);
+    if (saveData.taskStats.length > 0) {
+      expect(saveData.taskStats[0]).toHaveProperty("isCompleted");
+    }
+  });
+
+  it("38. You can get users with task statistics and pagination.", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+      query: { page: 1, limit: 10 },
+    });
+    saveRes = httpMocks.createResponse();
+    await getUsersWithStats(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData).toHaveProperty("users");
+  });
+
+  it("39. You can search tasks using raw SQL.", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+      query: { q: "task", limit: 20 },
+    });
+    saveRes = httpMocks.createResponse();
+    await searchTasks(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData).toHaveProperty("results");
+  });
+
+  it("40. Search with query too short returns 400.", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+      query: { q: "a" },
+    });
+    saveRes = httpMocks.createResponse();
+    await searchTasks(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(400);
+  });
+
+  it("41. User1 can set the task to isCompleted: true and change priority.", async () => {
+    const req = httpMocks.createRequest({
+      method: "PATCH",
+    });
+    global.user_id = user1.id;
+    req.params = { id: saveTaskId || "1" };
+    req.body = { isCompleted: true, priority: "low" };
+    saveRes = httpMocks.createResponse();
+    await update(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(200);
+    saveData = saveRes._getJSONData();
+    expect(saveData.isCompleted).toBe(true);
+  });
+
+  it("42. User1 can delete this task.", async () => {
+    const req = httpMocks.createRequest({ method: "DELETE" });
+    global.user_id = user1.id;
+    req.params = { id: saveTaskId || "1" };
+    saveRes = httpMocks.createResponse();
+    await deleteTask(req, saveRes, () => {});
+    expect(saveRes.statusCode).toBe(200);
+  });
+
+  it("61. If priority is specified, it must be one of low, medium, or high.", () => {
+    const { error } = taskSchema.validate({
+      title: "first task",
+      priority: "invalid",
+    });
+    expect(error.details.find((detail) => detail.context.key == "priority")).toBeDefined();
+  });
+
+  it("62. If priority is not specified, it defaults to medium.", () => {
+    const { value } = taskSchema.validate({ title: "first task" });
+    expect(value.priority).toBe("medium");
+  });
+
+  it("63. Test that the title is not required in this case.", () => {
+    const { error } = patchTaskSchema.validate({ isCompleted: true });
+    expect(error).toBeFalsy();
+  });
+
+  it("64. Test that if no value is provided for `isCompleted`, that this remains undefined in the returned value.", () => {
+    const { value } = patchTaskSchema.validate({ title: "first task" });
+    expect(value.isCompleted).toBeUndefined();
+  });
+
+  it("65. Test that priority can be updated.", () => {
+    const { value } = patchTaskSchema.validate({ priority: "high" });
+    expect(value.priority).toBe("high");
+  });
+});
+
 let userSchema = null;
 let taskSchema = null;
 let patchTaskSchema = null;
