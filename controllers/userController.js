@@ -89,6 +89,38 @@ async function show(req, res, next) {
 async function register(req, res, next) {
   if (!req.body) req.body = {};
 
+  let isPerson = false;
+  if (req.body.recaptchaToken) {
+    const token = req.body.recaptchaToken;
+    const params = new URLSearchParams();
+    params.append("secret", process.env.RECAPTCHA_SECRET);
+    params.append("response", token);
+    params.append("remoteip", req.ip);
+    const response = await fetch(
+      "https://www.google.com/recaptcha/api/siteverify",
+      {
+        method: "POST",
+        body: params.toString(),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+    );
+    const data = await response.json();
+    if (data.success) isPerson = true;
+    delete req.body.recaptchaToken;
+  } else if (
+    process.env.RECAPTCHA_BYPASS &&
+    req.get("X-Recaptcha-Test") === process.env.RECAPTCHA_BYPASS
+  ) {
+    isPerson = true;
+  }
+  if (!isPerson) {
+    return res
+      .status(400)
+      .json({ message: "Bot verification failed. Please complete the reCAPTCHA." });
+  }
+
   // 1. Run Joi validation
   const { error, value } = userSchema.validate(req.body, {
     abortEarly: false,

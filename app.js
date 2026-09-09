@@ -26,7 +26,7 @@ app.use(
 app.use(helmet());
 
 // 1. Use express.json() before routes
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(xss());
 
