@@ -1,4 +1,5 @@
 require("dotenv").config();
+process.env.RECAPTCHA_BYPASS ||= "test-recaptcha-bypass";
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const waitForRouteHandlerCompletion = require("./waitForRouteHandlerCompletion");
@@ -141,6 +142,23 @@ describe("testing logon, register, and logoff", () => {
     saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(register, req, saveRes);
     expect(saveRes.statusCode).toBe(201);
+  });
+
+  it("44. The test bypass is rejected outside test mode.", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const req = httpMocks.createRequest({
+        method: "POST",
+        body: { name: "Production Check", email: "production-check@example.com", password: "Pa$$word20" },
+      });
+      req.headers = { "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS };
+      saveRes = MockResponseWithCookies();
+      await waitForRouteHandlerCompletion(register, req, saveRes);
+      expect(saveRes.statusCode).toBe(400);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });
 
