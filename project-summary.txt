@@ -4,8 +4,8 @@ Added role-based access control for analytics endpoints.
 
 What was added:
 - Added an optional `roles` field to the user model in Prisma.
-- User login/register flows can include a comma-delimited role string such as `manager,editor`.
-- JWT payloads now carry the roles value when present.
+- User records can store a comma-delimited role string such as `manager,editor`.
+- User login JWTs carry the stored roles value when present.
 - The JWT middleware stores those roles on `req.user.roles`.
 - The analytics router now enforces manager-only access with a `401 Unauthorized` response for users without the `manager` role.
 
