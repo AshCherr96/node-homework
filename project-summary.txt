@@ -15,6 +15,8 @@ The analytics pagination and task-search behavior documented below already exist
 
 REST API documentation for reviewer testing:
 
+The analytics router is mounted at `/api/analytics`, so the complete reviewer paths are:
+
 1) GET /api/analytics/users
    - Method: GET
    - Authentication: required via JWT cookie
