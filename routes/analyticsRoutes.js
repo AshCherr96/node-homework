@@ -27,4 +27,8 @@ router.get("/tasks/search", analyticsController.searchTasks);
 
 router.requireManager = requireManager;
 router.hasManagerRole = hasManagerRole;
-module.exports = { router, hasManagerRole, requireManager };
+
+module.exports = router;
+module.exports.router = router;
+module.exports.hasManagerRole = hasManagerRole;
+module.exports.requireManager = requireManager;

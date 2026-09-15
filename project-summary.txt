@@ -1,1 +1,42 @@
 Deployed application URL on Render: https://ashbcherr-node-homework.onrender.com/
+
+Added role-based access control for analytics endpoints.
+
+What was added:
+- Added an optional `roles` field to the user model in Prisma.
+- User login/register flows can include a comma-delimited role string such as `manager,editor`.
+- JWT payloads now carry the roles value when present.
+- The JWT middleware stores those roles on `req.user.roles`.
+- The analytics router now enforces manager-only access with a `401 Unauthorized` response for users without the `manager` role.
+
+This gives the app a lightweight RBAC pattern that can be extended to additional roles later without changing the general auth flow.
+
+REST API documentation for reviewer testing:
+
+1) GET /api/analytics/users
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Query params: none
+   - Request body: none
+   - Expected behavior: returns analytics summary for all users if the authenticated user has `manager` in `req.user.roles`; otherwise returns 401.
+
+2) GET /api/analytics/users/:id
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Query params: none
+   - Request body: none
+   - Expected behavior: returns analytics for the requested user if authenticated user is a manager; otherwise returns 401.
+
+3) GET /api/analytics/tasks/search
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Query params: optional search parameters supported by the controller implementation
+   - Request body: none
+   - Expected behavior: returns task search results only for managers; otherwise returns 401.
+
+Testing notes:
+- A manager token is one whose decoded JWT contains a role string including `manager`.
+- A non-manager token with roles such as `editor` or no roles should receive 401 when hitting the analytics routes.
