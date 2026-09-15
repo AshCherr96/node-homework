@@ -207,6 +207,30 @@ describe("Testing JWT middleware", () => {
     expect(next).toHaveBeenCalled();
     expect(req.user.roles).toBe("manager,editor");
   });
+
+  it("65b. If the JWT omits roles, middleware loads the user's role list from the database before authorizing a manager route.", async () => {
+    const user = await prisma.user.create({
+      data: {
+        email: "manager-db-role@example.com",
+        name: "Manager DB Role",
+        hashedPassword: "placeholder-hash", 
+        roles: "manager,editor",
+      },
+    });
+
+    const req = httpMocks.createRequest({ method: "POST" });
+    saveRes = MockResponseWithCookies();
+    const validToken = jwt.sign({ id: user.id, csrfToken: "goodtoken" }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    req.cookies = { jwt: validToken };
+    req.headers = { "X-CSRF-TOKEN": "goodtoken" };
+
+    const next = await waitForRouteHandlerCompletion(jwtMiddleware, req, saveRes);
+    expect(next).toHaveBeenCalled();
+    expect(req.user.roles).toBe("manager,editor");
+  });
 });
 
 describe("Testing manager access control", () => {

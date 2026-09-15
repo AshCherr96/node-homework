@@ -21,8 +21,8 @@ const requireManager = (req, res, next) => {
 };
 
 router.use(requireManager);
-router.get("/users/:id", analyticsController.getUserAnalytics);
 router.get("/users", analyticsController.getUsersWithStats);
+router.get("/users/:id", analyticsController.getUserAnalytics);
 router.get("/tasks/search", analyticsController.searchTasks);
 
 router.requireManager = requireManager;
