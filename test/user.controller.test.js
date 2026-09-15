@@ -51,6 +51,7 @@ describe("testing logon, register, and logoff", () => {
       method: "POST",
       body: { name: "Bob", email: "bob@sample.com", password: "Pa$$word20" },
     });
+    req.headers = { "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS };
     saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(register, req, saveRes);
     registerRes = saveRes;
@@ -120,9 +121,25 @@ describe("testing logon, register, and logoff", () => {
       method: "POST",
       body: { name: "Bob", email: "bob@sample.com", password: "Pa$$word20" },
     });
+    req.headers = { "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS };
     saveRes = MockResponseWithCookies();
     await waitForRouteHandlerCompletion(register, req, saveRes);
     expect(saveRes.statusCode).toBe(400);
+  });
+
+  it("43. A user can register using the test bypass header when no token is in the body.", async () => {
+    const req = httpMocks.createRequest({
+      method: "POST",
+      body: {
+        name: "Charlie",
+        email: "charlie@sample.com",
+        password: "Pa$$word20",
+      },
+    });
+    req.headers = { "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS };
+    saveRes = MockResponseWithCookies();
+    await waitForRouteHandlerCompletion(register, req, saveRes);
+    expect(saveRes.statusCode).toBe(201);
   });
 });
 
