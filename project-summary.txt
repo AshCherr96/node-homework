@@ -40,3 +40,5 @@ REST API documentation for reviewer testing:
 Testing notes:
 - A manager token is one whose decoded JWT contains a role string including `manager`.
 - A non-manager token with roles such as `editor` or no roles should receive 401 when hitting the analytics routes.
+- For Postman testing, log in as a user whose `users.roles` value is something like `manager,editor`. After login, inspect the JWT cookie and decode it. A valid manager JWT should include a payload with `id` and `roles` set to a comma-delimited string containing `manager`.
+- If the cookie is missing, invalid, or the decoded roles do not include `manager`, the analytics routes should respond with `401 Unauthorized` and `{ "message": "Manager access required." }`.
