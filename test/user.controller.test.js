@@ -143,6 +143,23 @@ describe("testing logon, register, and logoff", () => {
     await waitForRouteHandlerCompletion(register, req, saveRes);
     expect(saveRes.statusCode).toBe(201);
   });
+
+  it("44. The test bypass is rejected outside test mode.", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const req = httpMocks.createRequest({
+        method: "POST",
+        body: { name: "Production Check", email: "production-check@example.com", password: "Pa$$word20" },
+      });
+      req.headers = { "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS };
+      saveRes = MockResponseWithCookies();
+      await waitForRouteHandlerCompletion(register, req, saveRes);
+      expect(saveRes.statusCode).toBe(400);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
 });
 
 describe("Testing JWT middleware", () => {
