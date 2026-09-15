@@ -20,8 +20,12 @@ module.exports = async (req, res, next) => {
       return send401(res);
     }
 
-    // Controllers use this trusted identity instead of shared global state.
+    // Attach the validated identity to the request so controllers can use it.
+    // If the JWT includes roles, expose them as req.user.roles for route-level RBAC checks.
     req.user = { id: decoded.id };
+    if (decoded.roles) {
+      req.user.roles = decoded.roles;
+    }
 
     if (["POST", "PATCH", "PUT", "DELETE", "CONNECT"].includes(req.method)) {
       if (req.get("X-CSRF-TOKEN") != decoded.csrfToken) {

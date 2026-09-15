@@ -26,7 +26,13 @@ const cookieFlags = (req) => {
 };
 
 function setJwtCookie(req, res, user) {
-  const payload = { id: user.id, csrfToken: randomUUID() };
+  const payload = {
+    id: user.id,
+    csrfToken: randomUUID(),
+    // Keep the user's role list in the signed JWT so later middleware can authorize RBAC checks.
+    // Example format: "manager,editor". The roles are comma-delimited to match the DB field.
+    ...(user.roles ? { roles: user.roles } : {}),
+  };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     algorithm: "HS256",
     expiresIn: "1h",
@@ -207,6 +213,7 @@ async function logon(req, res, next) {
         id: true,
         name: true,
         email: true,
+        roles: true,
         hashedPassword: true,
       },
     });

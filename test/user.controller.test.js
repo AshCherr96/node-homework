@@ -7,6 +7,7 @@ const httpMocks = require("node-mocks-http");
 const { EventEmitter } = require("node:events");
 const { register, logoff, logon } = require("../controllers/userController");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
+const { router: analyticsRoutes, hasManagerRole } = require("../routes/analyticsRoutes");
 const jwt = require("jsonwebtoken");
 
 const cookie = require("cookie");
@@ -191,5 +192,45 @@ describe("Testing JWT middleware", () => {
 
   it("65. If both the token and the jwt are good, req.user.id has the appropriate value.", () => {
     expect(saveReq.user.id).toBe(5);
+  });
+
+  it("65a. If the JWT includes roles, req.user.roles is stored on the request.", async () => {
+    const req = httpMocks.createRequest({ method: "POST" });
+    saveRes = MockResponseWithCookies();
+    const validToken = jwt.sign({ id: 9, csrfToken: "goodtoken", roles: "manager,editor" }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    req.cookies = { jwt: validToken };
+    req.headers = {};
+    req.headers["X-CSRF-TOKEN"] = "goodtoken";
+    const next = await waitForRouteHandlerCompletion(jwtMiddleware, req, saveRes);
+    expect(next).toHaveBeenCalled();
+    expect(req.user.roles).toBe("manager,editor");
+  });
+});
+
+describe("Testing manager access control", () => {
+  it("66. hasManagerRole returns true for manager roles and false otherwise.", () => {
+    expect(hasManagerRole("manager,editor")).toBe(true);
+    expect(hasManagerRole("editor,viewer")).toBe(false);
+    expect(hasManagerRole()).toBe(false);
+  });
+
+  it("67. A non-manager receives 401 when accessing analytics routes.", async () => {
+    const req = httpMocks.createRequest({ method: "GET", user: { id: 1, roles: "editor" } });
+    const res = MockResponseWithCookies();
+    const next = jest.fn();
+    await analyticsRoutes.requireManager(req, res, next);
+    expect(res.statusCode).toBe(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("68. A manager receives access to analytics routes.", async () => {
+    const req = httpMocks.createRequest({ method: "GET", user: { id: 1, roles: "manager,editor" } });
+    const res = MockResponseWithCookies();
+    const next = jest.fn();
+    await analyticsRoutes.requireManager(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.statusCode).not.toBe(401);
   });
 });
