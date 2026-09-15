@@ -11,14 +11,6 @@ let saveRes;
 let loginRes;
 let csrfToken;
 
-const getJwtCookie = (response) => {
-  const setCookieHeader = response?.headers?.["set-cookie"];
-  if (!Array.isArray(setCookieHeader)) {
-    return undefined;
-  }
-  return setCookieHeader.find((entry) => entry.startsWith("jwt="));
-};
-
 beforeAll(async () => {
   await prisma.task.deleteMany();
   await prisma.user.deleteMany();
