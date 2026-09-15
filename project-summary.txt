@@ -1,6 +1,6 @@
 Deployed application URL on Render: https://ashbcherr-node-homework.onrender.com/
 
-Extra feature implemented: role-based access control for analytics, plus analytics pagination and search improvements.
+Extra feature implemented: role-based access control for analytics.
 
 What was added:
 - Added an optional `roles` field to the `users` model in Prisma.
@@ -8,10 +8,10 @@ What was added:
 - The login flow includes that stored roles value in the JWT when present.
 - The JWT middleware attaches those roles to `req.user.roles` for route-level checks.
 - The analytics router now enforces manager-only access before the controller logic runs.
-- `GET /api/analytics/users` supports pagination with `page` and `limit` query parameters.
-- `GET /api/analytics/tasks/search` supports search with `q` (or `find`) and `limit` query parameters.
 
-This gives the app a lightweight RBAC pattern that can be extended to additional roles later, while also exposing cleaner analytics pagination and search behavior for reviewer testing.
+This gives the app a lightweight RBAC pattern that can be extended to additional roles later.
+
+The analytics pagination and task-search behavior documented below already exists in the base application; it is included so reviewers can exercise the complete analytics API without mistaking it for part of this feature.
 
 REST API documentation for reviewer testing:
 
