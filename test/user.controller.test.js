@@ -1,4 +1,5 @@
 require("dotenv").config();
+process.env.RECAPTCHA_BYPASS ||= "test-recaptcha-bypass";
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const waitForRouteHandlerCompletion = require("./waitForRouteHandlerCompletion");
