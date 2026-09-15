@@ -1,1 +1,58 @@
 Deployed application URL on Render: https://ashbcherr-node-homework.onrender.com/
+
+Extra feature implemented: role-based access control for analytics.
+
+What was added:
+- Added an optional `roles` field to the `users` model in Prisma.
+- A stored user record can include a comma-delimited roles string such as `manager,editor`.
+- The login flow includes that stored roles value in the JWT when present.
+- The JWT middleware attaches those roles to `req.user.roles` for route-level checks.
+- The analytics router now enforces manager-only access before the controller logic runs.
+
+This gives the app a lightweight RBAC pattern that can be extended to additional roles later.
+
+The analytics pagination and task-search behavior documented below already exists in the base application; it is included so reviewers can exercise the complete analytics API without mistaking it for part of this feature.
+
+REST API documentation for reviewer testing:
+
+1) GET /api/analytics/users
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Query params:
+     - `page` (optional, default `1`)
+     - `limit` (optional, default `10`, range `1-100`)
+   - Request body: none
+   - Success response: `200 OK` with `{ users, pagination }`
+   - Unauthorized response: `401 Unauthorized` with `{ "message": "Manager access required." }`
+
+2) GET /api/analytics/users/:id
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Path params:
+     - `:id` = numeric user ID
+   - Query params: none
+   - Request body: none
+   - Success response: `200 OK` with `{ taskStats, recentTasks, weeklyProgress }`
+   - Not found response: `404 Not Found` when the user does not exist
+   - Bad request response: `400 Bad Request` when the ID is invalid
+   - Unauthorized response: `401 Unauthorized` with `{ "message": "Manager access required." }`
+
+3) GET /api/analytics/tasks/search
+   - Method: GET
+   - Authentication: required via JWT cookie
+   - Authorization: manager role required
+   - Query params:
+     - `q` or `find` (required, minimum 2 characters)
+     - `limit` (optional, default `20`)
+   - Request body: none
+   - Success response: `200 OK` with `{ results, query, count }`
+   - Bad request response: `400 Bad Request` when the search string is too short
+   - Unauthorized response: `401 Unauthorized` with `{ "message": "Manager access required." }`
+
+Testing notes:
+- A manager token is one whose decoded JWT payload includes `id` and a `roles` string containing `manager`, for example `"manager,editor"`.
+- A non-manager token with roles such as `editor` or no roles should receive `401 Unauthorized` when hitting the analytics routes.
+- For Postman testing, create or update a user record so `users.roles` is set to a manager string, then log in and decode the JWT cookie. The decoded payload should include `roles` matching `manager,editor` (or another value containing `manager`).
+- If the cookie is missing, invalid, or the decoded roles do not include `manager`, the route should return `401 Unauthorized` and `{ "message": "Manager access required." }`.
