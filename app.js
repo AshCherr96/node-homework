@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 const helmet = require("helmet");
 const { xss } = require("express-xss-sanitizer");
 const rateLimiter = require("express-rate-limit");
@@ -15,6 +16,28 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const app = express();
 app.set("trust proxy", 1);
+
+const allowedOrigins = new Set(
+  [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    process.env.FRONTEND_ORIGIN,
+  ].filter(Boolean),
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "X-CSRF-TOKEN"],
+  }),
+);
 
 // Limit abusive clients before doing any further request processing.
 app.use(
